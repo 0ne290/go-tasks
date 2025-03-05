@@ -3,14 +3,14 @@ package main
 import (
 	"github.com/0ne290/go-tasks/task1/internal"
 	//"crypto/rand"
-	"crypto/sha256"
+	"bufio"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"bufio"
-    "os"
-	"encoding/base64"
+	"os"
 )
 
 const privateKeyAsPemString string = `-----BEGIN RSA PRIVATE KEY-----
@@ -63,7 +63,7 @@ lyt15GjrPI57pS5b9b3w4ddPhcxaaxfA94HXg44cCHhtrn0PX5Mprxo/xbtHpclZ
 Bmd9GfXwhkryW7FvnTjdG/Uy45ljcJjSohSaTua0hdzvRgcXZxF2iO4JZFkPtTAZ
 1xncOWvgV5vMzKsJZaY1gFYVJ6e5rw2NZjfD5ZJjAvJzY+ZzfN8zbCWjQzqOM7IP
 2BbyM0EWC89v5sYaRkpexfNfz2RLpCc8a96LrNianghcBStk4Y18o8tNMkgC
------END RSA PRIVATE KEY-----`;
+-----END RSA PRIVATE KEY-----`
 
 const aesKey string = "ER9ghtUm724aCT0Eulu0AZkJw99d2hKF"
 
@@ -76,20 +76,20 @@ func main() {
 
 func executeRsa() {
 	privateKey := parseRsaPrivateKeyFromPemStr(privateKeyAsPemString)
-	decryptor := encryption.NewRsaDecryptor(sha256.New(), privateKey)
+	decryptor := internal.NewRsaDecryptor(sha256.New(), privateKey)
 	publicKey := decryptor.GetPublicKey()
-	encryptor := encryption.NewRsaEncryptor(sha256.New(), &publicKey)
+	encryptor := internal.NewRsaEncryptor(sha256.New(), &publicKey)
 	stdinReader := bufio.NewReader(os.Stdin)
 
 	fmt.Print("Enter label: ")
-    tmp, err := stdinReader.ReadString('\n')
+	tmp, err := stdinReader.ReadString('\n')
 	if err != nil {
 		panic(err)
 	}
 	label := []byte(tmp)
 
 	fmt.Print("Enter source text: ")
-    tmp, err = stdinReader.ReadString('\n')
+	tmp, err = stdinReader.ReadString('\n')
 	if err != nil {
 		panic(err)
 	}
@@ -107,11 +107,11 @@ func executeRsa() {
 }
 
 func executeAes() {
-	aes := encryption.NewAes([]byte(aesKey))
+	aes := internal.NewAes([]byte(aesKey))
 	stdinReader := bufio.NewReader(os.Stdin)
 
 	fmt.Print("Enter source text: ")
-    tmp, err := stdinReader.ReadString('\n')
+	tmp, err := stdinReader.ReadString('\n')
 	if err != nil {
 		panic(err)
 	}
@@ -141,17 +141,17 @@ func parseRsaPrivateKeyFromPemStr(privPEM string) *rsa.PrivateKey {
 }
 
 func exportRsaPublicKeyAsPemStr(pubkey *rsa.PublicKey) string {
-    pubkey_bytes, err := x509.MarshalPKIXPublicKey(pubkey)
-    if err != nil {
-            panic(err)
-    }
+	pubkey_bytes, err := x509.MarshalPKIXPublicKey(pubkey)
+	if err != nil {
+		panic(err)
+	}
 
-    pubkey_pem := pem.EncodeToMemory(
-            &pem.Block{
-                    Type:  "RSA PUBLIC KEY",
-                    Bytes: pubkey_bytes,
-            },
-    )
+	pubkey_pem := pem.EncodeToMemory(
+		&pem.Block{
+			Type:  "RSA PUBLIC KEY",
+			Bytes: pubkey_bytes,
+		},
+	)
 
-    return string(pubkey_pem)
+	return string(pubkey_pem)
 }
