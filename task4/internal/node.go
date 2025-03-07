@@ -1,6 +1,6 @@
 package internal
 
 type node[T any] struct {
-	Value T
-	Next *node[T]
+	value T
+	next  *node[T]
 }

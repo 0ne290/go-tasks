@@ -21,7 +21,7 @@ func (stack *Stack[T]) Peek() (T, error) {
 		return *new(T), errors.New("stack is empty")
 	}
 
-	return stack.head.Value, nil
+	return stack.head.value, nil
 }
 
 func (stack *Stack[T]) Push(value T) {
@@ -34,7 +34,7 @@ func (stack *Stack[T]) Pop() (T, error) {
 	}
 
 	oldHead := stack.head
-	stack.head = stack.head.Next
+	stack.head = stack.head.next
 
-	return oldHead.Value, nil
+	return oldHead.value, nil
 }

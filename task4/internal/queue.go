@@ -22,7 +22,7 @@ func (queue *Queue[T]) Peek() (T, error) {
 		return *new(T), errors.New("queue is empty")
 	}
 
-	return queue.head.Value, nil
+	return queue.head.value, nil
 }
 
 func (queue *Queue[T]) Enqueue(value T) {
@@ -32,7 +32,7 @@ func (queue *Queue[T]) Enqueue(value T) {
 		queue.tail = newNode
 		queue.head = newNode
 	} else {
-		queue.tail.Next = newNode
+		queue.tail.next = newNode
 		queue.tail = newNode
 	}
 }
@@ -43,11 +43,11 @@ func (queue *Queue[T]) Dequeue() (T, error) {
 	}
 
 	oldHead := queue.head
-	queue.head = queue.head.Next
+	queue.head = queue.head.next
 
 	if queue.head == nil {
 		queue.tail = nil
 	}
 
-	return oldHead.Value, nil
+	return oldHead.value, nil
 }
