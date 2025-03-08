@@ -41,6 +41,14 @@ func (table *SquareTable) SetValue(value float32, row, column int) {
 	table.rows[row][column].value = value
 }
 
+func (table *SquareTable) GetValue(row, column int) float32 {
+	return table.rows[row][column].value
+}
+
+func (table *SquareTable) GetDimension() int {
+	return table.dimension
+}
+
 func createRows(dimension int) []line {
 	rows := make([]line, dimension)
 	for i := 0; i < dimension; i++ {
@@ -91,4 +99,16 @@ func (table *SquareTable) subMinimumCellFromColumns() {
 			column[j].value -= columnMinimum
 		}
 	}
+}
+
+func (table *SquareTable) getCellsAtTheIntersectionOfRowsAndColumns(rows, columns []int) []*cell {
+	var cells = make([]*cell, 0, 32)
+
+	for i := 0; i < len(rows); i++ {
+		for j := 0; j < len(columns); j++ {
+			cells = append(cells, table.rows[rows[i]][columns[j]])
+		}
+	}
+
+	return cells
 }

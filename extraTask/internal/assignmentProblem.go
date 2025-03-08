@@ -1,5 +1,10 @@
 package internal
 
+import (
+	"cmp"
+	"slices"
+)
+
 type AssignmentProblem struct {
 	costTable *SquareTable
 }
@@ -8,82 +13,74 @@ func NewAssignmentProblem(costTable *SquareTable) *AssignmentProblem {
 	return &AssignmentProblem{costTable}
 }
 
-func (assignmentProblem *AssignmentProblem) HungarianAlgorithm() {
+func (assignmentProblem *AssignmentProblem) HungarianAlgorithm() (assignmentTable [][]bool, costTable *SquareTable, minimumCost float32) {
 	costTableCopy := assignmentProblem.costTable.Copy()
 
 	costTableCopy.subMinimumCellFromRows()
 	costTableCopy.subMinimumCellFromColumns()
 
-	bipartiteGraph := newBipartiteGraph(costTableCopy)
-	var greatestMatching = bipartiteGraph.fordFulkersonAlgorithm()
+	graph := newBipartiteGraph(costTableCopy)
+	var greatestMatching = graph.fordFulkersonAlgorithm()
 
 	for len(greatestMatching)/2 < costTableCopy.dimension {
-		leftUnvisitedNodes, rightVisitedNodes := bipartiteGraph.searchMinimumVertexCover(greatestMatching);
-		  //graphExceptMinimumVertexCover := GraphExceptMinimumVertexCover(minimumVertexCover);
-		  /*AlphaConversion(costTable, graphExceptMinimumVertexCover);
-		  _bipartiteGraph = new BipartiteGraph(costTable);
-		  greatestMatching = _bipartiteGraph.FordFulkersonAlgorithm();
-		  logger.AddTable(costTable);
-		  logger.AddMatching(greatestMatching);*/
+		leftUnvisitedNodes, rightVisitedNodes := graph.searchMinimumVertexCover(greatestMatching)
+		leftVisitedNodes, rightUnvisitedNodes := graph.graphExceptMinimumVertexCover(leftUnvisitedNodes, rightVisitedNodes)
+
+		alphaConversion(costTableCopy, graph, leftVisitedNodes, rightUnvisitedNodes)
+		graph = newBipartiteGraph(costTableCopy)
+		greatestMatching = graph.fordFulkersonAlgorithm()
 	}
 
-	assignmentTable := make([][]bool, costTableCopy.dimension)
+	assignmentTable = make([][]bool, costTableCopy.dimension)
 	for i := 0; i < costTableCopy.dimension; i++ {
 		assignmentTable[i] = make([]bool, costTableCopy.dimension)
 	}
-	var minimumCost float32 = 0
+	minimumCost = 0
 	for i := 0; i < costTableCopy.dimension; i++ {
-		columnIndex := greatestMatching[i*2+1] - bipartiteGraph.rightPartIndex
-		minimumCost += costTableCopy.rows[i][columnIndex].value
+		columnIndex := greatestMatching[i*2+1] - graph.rightPartIndex
+		minimumCost += assignmentProblem.costTable.rows[i][columnIndex].value
 		assignmentTable[i][columnIndex] = true
 	}
 
-	/*var result = new TheAssignmentProblemDto(assignmentTable, CostTable, minimumCost);
-
-	  logger.Dispose();
-
-	  return result;*/
+	return assignmentTable, assignmentProblem.costTable, minimumCost
 }
 
-private IDictionary<string, ISet<int>> GraphExceptMinimumVertexCover(leftUnvisitedNodes, rightVisitedNodes []int) (leftVisitedNodes, rightUnvisitedNodes []int)
-  {
-      var graphExceptMinimumVertexCover = new Dictionary<string, ISet<int>>
-      {
-          { "leftNodes", _ },
-          { "rightNodes", _bipartiteGraph.RightNodes }
-      };
+func alphaConversion(costTable *SquareTable, graph *BipartiteGraph, leftVisitedNodes, rightUnvisitedNodes []int) {
+	selectedRows := make([]int, len(leftVisitedNodes))
+	copy(selectedRows, leftVisitedNodes)
+	selectedColumns := make([]int, len(rightUnvisitedNodes))
+	copy(selectedColumns, rightUnvisitedNodes)
 
-      bipartiteGraph.LeftNodes.ExceptWith(minimumVertexCover["leftNodes"]);
-      graphExceptMinimumVertexCover["rightNodes"].ExceptWith(minimumVertexCover["rightNodes"]);
+	for i := 0; i < len(selectedRows); i++ {
+		selectedRows[i] -= leftPartIndex
+	}
 
-      return
-  }
+	for i := 0; i < len(selectedColumns); i++ {
+		selectedColumns[i] -= graph.rightPartIndex
+	}
 
-  /*private void AlphaConversion(Table<double> costTable, IDictionary<string, ISet<int>> graphExceptMinimumVertexCover)
-  {
-      var selectedRows = graphExceptMinimumVertexCover["leftNodes"].ToArray();
-      var selectedColumns = graphExceptMinimumVertexCover["rightNodes"].ToArray();
+	cells := costTable.getCellsAtTheIntersectionOfRowsAndColumns(selectedRows, selectedColumns)
 
-      for (var i = 0; i < selectedRows.Length; i++)
-          selectedRows[i] -= BipartiteGraph.LeftPartIndex;
-      for (var i = 0; i < selectedColumns.Length; i++)
-          selectedColumns[i] -= _bipartiteGraph.RightPartIndex;
+	alphaCell := slices.MinFunc(cells, func(a, b *cell) int {
+		return cmp.Compare(a.value, b.value)
+	})
+	alpha := alphaCell.value
 
-      var cells = costTable.GetCellsAtTheIntersectionOfRowsAndColumns(selectedRows, selectedColumns);
+	for _, row := range selectedRows {
+		for _, cell := range costTable.rows[row] {
+			cell.value -= alpha
+		}
+	}
 
-      var alphaCell = cells.Min();
-      if (alphaCell == null)
-          throw new ArgumentNullException(nameof(alphaCell));
-      var alpha = alphaCell.Value;
-
-      foreach (var row in selectedRows)
-          foreach (var cell in costTable.Rows[row])
-              cell.Value -= alpha;
-
-      var unselectedColumns = _bipartiteGraph.RightNodes;
-      unselectedColumns.ExceptWith(graphExceptMinimumVertexCover["rightNodes"]);
-      foreach (var column in unselectedColumns)
-          foreach (var cell in costTable.Columns[column - _bipartiteGraph.RightPartIndex])
-              cell.Value += alpha;
-  }
-*/
+	unselectedColumns := make([]int, 0, 32)
+	for _, node := range graph.rightNodes {
+		if !slices.Contains(rightUnvisitedNodes, node) {
+			unselectedColumns = append(unselectedColumns, node)
+		}
+	}
+	for _, column := range unselectedColumns {
+		for _, cell := range costTable.columns[column-graph.rightPartIndex] {
+			cell.value += alpha
+		}
+	}
+}

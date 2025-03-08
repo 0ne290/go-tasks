@@ -1,10 +1,12 @@
 package internal
 
-import "slices"
+import (
+	"slices"
+)
 
 const (
 	leftPartIndex int = 1
-	sourceIndex int = 0
+	sourceIndex   int = 0
 )
 
 type edge struct {
@@ -251,19 +253,20 @@ func (graph *BipartiteGraph) restoreEdges() {
 
 func (graph *BipartiteGraph) searchMinimumVertexCover(greatestMatching []int) (leftUnvisitedNodes, rightVisitedNodes []int) {
 	for i := 0; i < len(greatestMatching); i += 2 {
-		graph.edges[greatestMatching[i]][greatestMatching[i + 1]].sendFlow(1);
-		graph.edges[greatestMatching[i + 1]][greatestMatching[i]].receiveFlow(1);
+		graph.edges[greatestMatching[i]][greatestMatching[i+1]].sendFlow(1)
+		graph.edges[greatestMatching[i+1]][greatestMatching[i]].receiveFlow(1)
 	}
 
-	leftUnvisitedNodes = graph.leftNodes;
+	leftUnvisitedNodes = make([]int, len(graph.leftNodes))
+	copy(leftUnvisitedNodes, graph.leftNodes)
 	rightVisitedNodes = make([]int, 0, 32)
 
 	for i := leftPartIndex; i < graph.rightPartIndex; i++ {
 		if slices.Contains(greatestMatching, i) {
-			continue;
+			continue
 		}
-			
-		searchRoute := graph.nodeSearch(i, -1);
+
+		searchRoute := graph.nodeSearch(i, -1)
 		for _, node := range searchRoute {
 			leftUnvisitedNodes = slices.DeleteFunc(leftUnvisitedNodes, func(a int) bool {
 				return a == node
@@ -274,7 +277,25 @@ func (graph *BipartiteGraph) searchMinimumVertexCover(greatestMatching []int) (l
 		}
 	}
 
-	graph.restoreEdges();
+	graph.restoreEdges()
+
+	return
+}
+
+func (graph *BipartiteGraph) graphExceptMinimumVertexCover(leftUnvisitedNodes, rightVisitedNodes []int) (leftVisitedNodes, rightUnvisitedNodes []int) {
+	leftVisitedNodes = make([]int, 0, 32)
+	rightUnvisitedNodes = make([]int, 0, 32)
+
+	for _, node := range graph.leftNodes {
+		if !slices.Contains(leftUnvisitedNodes, node) {
+			leftVisitedNodes = append(leftVisitedNodes, node)
+		}
+	}
+	for _, node := range graph.rightNodes {
+		if !slices.Contains(rightVisitedNodes, node) {
+			rightUnvisitedNodes = append(rightUnvisitedNodes, node)
+		}
+	}
 
 	return
 }
