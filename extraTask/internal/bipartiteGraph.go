@@ -1,5 +1,7 @@
 package internal
 
+import "slices"
+
 const (
 	leftPartIndex int = 1
 	sourceIndex int = 0
@@ -213,7 +215,7 @@ func (graph *BipartiteGraph) nodeSearch(startNode, targetNode int) []int {
 		}
 
 		var neighbours = graph.transportNetworkAdjacencyLists[currentNode]
-		for nodeToGo := range neighbours {
+		for _, nodeToGo := range neighbours {
 			if visited[nodeToGo] || graph.edges[currentNode][nodeToGo].isBusy() {
 				continue
 			}
@@ -247,36 +249,32 @@ func (graph *BipartiteGraph) restoreEdges() {
 	}
 }
 
-/*public IDictionary<string, ISet<int>> SearchMinimumVertexCover(IList<int> greatestMatching)
-{
-	for (var i = 0; i < greatestMatching.Count; i += 2)
-	{
-		GetEdge(greatestMatching[i], greatestMatching[i + 1]).SendFlow(1);
-		GetEdge(greatestMatching[i + 1], greatestMatching[i]).ReceiveFlow(1);
+func (graph *BipartiteGraph) searchMinimumVertexCover(greatestMatching []int) (leftUnvisitedNodes, rightVisitedNodes []int) {
+	for i := 0; i < len(greatestMatching); i += 2 {
+		graph.edges[greatestMatching[i]][greatestMatching[i + 1]].sendFlow(1);
+		graph.edges[greatestMatching[i + 1]][greatestMatching[i]].receiveFlow(1);
 	}
 
-	var leftUnvisitedNodes = LeftNodes;
-	var minimumVertexCover = new Dictionary<string, ISet<int>>();
+	leftUnvisitedNodes = graph.leftNodes;
+	rightVisitedNodes = make([]int, 0, 32)
 
-	var rightVisitedNodes = new HashSet<int>();
-
-	for (var i = LeftPartIndex; i < RightPartIndex; i++)
-	{
-		if (greatestMatching.Contains(i))
+	for i := leftPartIndex; i < graph.rightPartIndex; i++ {
+		if slices.Contains(greatestMatching, i) {
 			continue;
-		var searchRoute = NodeSearch(i, -1, _graphAdjacencyLists, new NodeStack());
-		foreach (var node in searchRoute)
-		{
-			leftUnvisitedNodes.Remove(node);
-			if (node >= RightPartIndex)
-				rightVisitedNodes.Add(node);
+		}
+			
+		searchRoute := graph.nodeSearch(i, -1);
+		for _, node := range searchRoute {
+			leftUnvisitedNodes = slices.DeleteFunc(leftUnvisitedNodes, func(a int) bool {
+				return a == node
+			})
+			if node >= graph.rightPartIndex {
+				rightVisitedNodes = append(rightVisitedNodes, node)
+			}
 		}
 	}
 
-	RestoreEdges();
+	graph.restoreEdges();
 
-	minimumVertexCover.Add("leftNodes", leftUnvisitedNodes);
-	minimumVertexCover.Add("rightNodes", rightVisitedNodes);
-
-	return minimumVertexCover;
-}*/
+	return
+}

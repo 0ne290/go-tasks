@@ -18,9 +18,9 @@ func (assignmentProblem *AssignmentProblem) HungarianAlgorithm() {
 	var greatestMatching = bipartiteGraph.fordFulkersonAlgorithm()
 
 	for len(greatestMatching)/2 < costTableCopy.dimension {
-		/*var minimumVertexCover = _bipartiteGraph.SearchMinimumVertexCover(greatestMatching);
-		  var graphExceptMinimumVertexCover = GraphExceptMinimumVertexCover(minimumVertexCover);
-		  AlphaConversion(costTable, graphExceptMinimumVertexCover);
+		leftUnvisitedNodes, rightVisitedNodes := bipartiteGraph.searchMinimumVertexCover(greatestMatching);
+		  //graphExceptMinimumVertexCover := GraphExceptMinimumVertexCover(minimumVertexCover);
+		  /*AlphaConversion(costTable, graphExceptMinimumVertexCover);
 		  _bipartiteGraph = new BipartiteGraph(costTable);
 		  greatestMatching = _bipartiteGraph.FordFulkersonAlgorithm();
 		  logger.AddTable(costTable);
@@ -45,21 +45,21 @@ func (assignmentProblem *AssignmentProblem) HungarianAlgorithm() {
 	  return result;*/
 }
 
-/*private IDictionary<string, ISet<int>> GraphExceptMinimumVertexCover(IDictionary<string, ISet<int>> minimumVertexCover)
+private IDictionary<string, ISet<int>> GraphExceptMinimumVertexCover(leftUnvisitedNodes, rightVisitedNodes []int) (leftVisitedNodes, rightUnvisitedNodes []int)
   {
       var graphExceptMinimumVertexCover = new Dictionary<string, ISet<int>>
       {
-          { "leftNodes", _bipartiteGraph.LeftNodes },
+          { "leftNodes", _ },
           { "rightNodes", _bipartiteGraph.RightNodes }
       };
 
-      graphExceptMinimumVertexCover["leftNodes"].ExceptWith(minimumVertexCover["leftNodes"]);
+      bipartiteGraph.LeftNodes.ExceptWith(minimumVertexCover["leftNodes"]);
       graphExceptMinimumVertexCover["rightNodes"].ExceptWith(minimumVertexCover["rightNodes"]);
 
-      return graphExceptMinimumVertexCover;
+      return
   }
 
-  private void AlphaConversion(Table<double> costTable, IDictionary<string, ISet<int>> graphExceptMinimumVertexCover)
+  /*private void AlphaConversion(Table<double> costTable, IDictionary<string, ISet<int>> graphExceptMinimumVertexCover)
   {
       var selectedRows = graphExceptMinimumVertexCover["leftNodes"].ToArray();
       var selectedColumns = graphExceptMinimumVertexCover["rightNodes"].ToArray();
