@@ -2,7 +2,7 @@ package internal
 
 const (
 	leftPartIndex int = 1
-	sourceIndex       = 0
+	sourceIndex int = 0
 )
 
 type edge struct {
@@ -42,7 +42,7 @@ type BipartiteGraph struct {
 	drainIndex                     int
 }
 
-func newBipartiteGraph(table *squareTable) *BipartiteGraph {
+func newBipartiteGraph(table *SquareTable) *BipartiteGraph {
 	graph := &BipartiteGraph{}
 
 	graph.preBuild(table)
@@ -52,7 +52,7 @@ func newBipartiteGraph(table *squareTable) *BipartiteGraph {
 	return graph
 }
 
-func (graph *BipartiteGraph) preBuild(table *squareTable) {
+func (graph *BipartiteGraph) preBuild(table *SquareTable) {
 	graph.nodesCount = table.dimension*2 + 2
 	graph.adjacencyMatrix = make([][]bool, graph.nodesCount)
 	for i := 0; i < graph.nodesCount; i++ {
@@ -73,7 +73,7 @@ func (graph *BipartiteGraph) preBuild(table *squareTable) {
 	}
 }
 
-func (graph *BipartiteGraph) buildEdges(table *squareTable) {
+func (graph *BipartiteGraph) buildEdges(table *SquareTable) {
 	graph.edges = make([][]*edge, graph.nodesCount)
 	for i := 0; i < graph.nodesCount; i++ {
 		graph.edges[i] = make([]*edge, graph.nodesCount)
@@ -84,8 +84,8 @@ func (graph *BipartiteGraph) buildEdges(table *squareTable) {
 	for i := 0; i < graph.nodesCount; i++ {
 		for j := 0; j < graph.nodesCount; j++ {
 			if directedGraphAdjacencyMatrix[i][j] {
-				graph.edges[i][j] = &edge{1, 1, false}
-				graph.edges[j][i] = &edge{0, 0, true}
+				graph.edges[i][j] = newEdge(1, false)
+				graph.edges[j][i] = newEdge(0, true)
 			} else if !graph.adjacencyMatrix[i][j] {
 				graph.edges[i][j] = &edge{0, 0, false}
 			}
@@ -93,7 +93,7 @@ func (graph *BipartiteGraph) buildEdges(table *squareTable) {
 	}
 }
 
-func (graph *BipartiteGraph) createDirectedGraphAdjacencyMatrix(table *squareTable) [][]bool {
+func (graph *BipartiteGraph) createDirectedGraphAdjacencyMatrix(table *SquareTable) [][]bool {
 	directedGraphAdjacencyMatrix := make([][]bool, graph.nodesCount)
 	for i := 0; i < graph.nodesCount; i++ {
 		directedGraphAdjacencyMatrix[i] = make([]bool, graph.nodesCount)
@@ -125,158 +125,158 @@ func (graph *BipartiteGraph) buildAdjacencyLists() {
 	graph.transportNetworkAdjacencyLists = make([][]int, graph.nodesCount)
 	graph.graphAdjacencyLists = make([][]int, graph.nodesCount)
 
-		for i := 0; i < graph.nodesCount; i++ {
-			graph.transportNetworkAdjacencyLists[i] = make([]int, 0, graph.nodesCount)
-			graph.graphAdjacencyLists[i] = make([]int, 0, graph.nodesCount)
-			for j := 0; j < graph.nodesCount; j++ {
-				if !graph.adjacencyMatrix[i][j] {
-					continue
-				}
-					
-				graph.transportNetworkAdjacencyLists[i] = append(graph.transportNetworkAdjacencyLists[i], j)
-				if j != 0 && j != graph.nodesCount - 1 {
-					graph.graphAdjacencyLists[i] = append(graph.graphAdjacencyLists[i], j)
-				}
-					
+	for i := 0; i < graph.nodesCount; i++ {
+		graph.transportNetworkAdjacencyLists[i] = make([]int, 0, graph.nodesCount)
+		graph.graphAdjacencyLists[i] = make([]int, 0, graph.nodesCount)
+		for j := 0; j < graph.nodesCount; j++ {
+			if !graph.adjacencyMatrix[i][j] {
+				continue
 			}
-		}
 
-		graph.graphAdjacencyLists[0] = make([]int, 0)
-		graph.graphAdjacencyLists[graph.nodesCount - 1] = make([]int, 0)
+			graph.transportNetworkAdjacencyLists[i] = append(graph.transportNetworkAdjacencyLists[i], j)
+			if j != 0 && j != graph.nodesCount-1 {
+				graph.graphAdjacencyLists[i] = append(graph.graphAdjacencyLists[i], j)
+			}
+
+		}
+	}
+
+	graph.graphAdjacencyLists[0] = make([]int, 0)
+	graph.graphAdjacencyLists[graph.nodesCount-1] = make([]int, 0)
 }
 
 func (graph *BipartiteGraph) fordFulkersonAlgorithm() []int {
-		//path := FindPathToNode(0, graph.nodesCount - 1, new NodeStack());
-		var path []int
-		for len(path) > 1 {
-			for i := 0; i < len(path) - 1; i++ {
-				graph.edges[path[i]][path[i + 1]].sendFlow(1);
-				graph.edges[path[i + 1]][path[i]].receiveFlow(1);
+	path := graph.findPathToNode(0, graph.nodesCount-1)
+	for len(path) > 1 {
+		for i := 0; i < len(path)-1; i++ {
+			graph.edges[path[i]][path[i+1]].sendFlow(1)
+			graph.edges[path[i+1]][path[i]].receiveFlow(1)
+		}
+		path = graph.findPathToNode(0, graph.nodesCount-1)
+	}
+
+	var greatestMatching = graph.getReverseFreeEdges()
+	graph.restoreEdges()
+
+	return greatestMatching
+}
+
+func (graph *BipartiteGraph) findPathToNode(startNode, targetNode int) []int {
+	path := make([]int, 0, 32)
+
+	var searchRoute = graph.nodeSearch(startNode, targetNode)
+	if searchRoute[len(searchRoute)-1] != targetNode {
+		return make([]int, 0)
+	}
+
+	node := searchRoute[len(searchRoute)-1]
+	path = append(path, node)
+
+	for i := len(searchRoute) - 2; i > -1; i-- {
+		if !graph.adjacencyMatrix[searchRoute[i]][node] {
+			continue
+		}
+
+		node = searchRoute[i]
+		path = append(path, node)
+	}
+
+	reverse(path)
+
+	return path
+}
+
+func reverse(numbers []int) {
+	for i, j := 0, len(numbers)-1; i < j; i, j = i+1, j-1 {
+		numbers[i], numbers[j] = numbers[j], numbers[i]
+	}
+}
+
+func (graph *BipartiteGraph) nodeSearch(startNode, targetNode int) []int {
+	visited := make([]bool, graph.nodesCount)
+	visitedNodes := make([]int, 0, 32)
+	nodesStack := NewStack[int]()
+	nodesStack.Push(startNode)
+
+	for !nodesStack.IsEmpty() {
+		currentNode, _ := nodesStack.Pop()
+
+		if visited[currentNode] {
+			continue
+		}
+
+		visited[currentNode] = true
+		visitedNodes = append(visitedNodes, currentNode)
+
+		if currentNode == targetNode {
+			return visitedNodes
+		}
+
+		var neighbours = graph.transportNetworkAdjacencyLists[currentNode]
+		for nodeToGo := range neighbours {
+			if visited[nodeToGo] || graph.edges[currentNode][nodeToGo].isBusy() {
+				continue
 			}
-			//path = FindPathToNode(0, NumberOfNodes - 1, new NodeStack());
+			nodesStack.Push(nodeToGo)
 		}
-
-		//var greatestMatching = GetReverseFreeEdges();
-		//RestoreEdges();
-		var greatestMatching []int
-
-		return greatestMatching;
 	}
 
-	/*func findPathToNode(int startNode, int targetNode, INodeStorage nodesStorage) []int {
-		path = new List<int>();
+	return visitedNodes
+}
 
-		var searchRoute = NodeSearch(startNode, targetNode, _transportNetworkAdjacencyLists, nodesStorage);
-		if (searchRoute[^1] != targetNode)
-			return new List<int>(0);
+func (graph *BipartiteGraph) getReverseFreeEdges() []int {
+	var edges = make([]int, 0, 32)
 
-		var node = searchRoute[^1];
-		path.Add(node);
-
-		for (var i = searchRoute.Count - 2; i > -1; i--)
-		{
-			if (!_adjacencyMatrix[searchRoute[i], node])
-				continue;
-			node = searchRoute[i];
-			path.Add(node);
-		}
-
-		path.TrimExcess();
-		path.Reverse();
-
-		return path;
-	}
-
-	private IList<int> NodeSearch(int startNode, int targetNode, IList<IList<int>> adjacencyLists, INodeStorage nodesStorage)
-	{
-		var visited = new bool[NumberOfNodes];
-
-		nodesStorage.Insert(startNode);
-
-		var visitedNodes = new List<int>();
-
-		while (!nodesStorage.IsEmpty())
-		{
-			var currentNode = nodesStorage.GetFirst();
-
-			if (visited[currentNode])
-				continue;
-
-			visited[currentNode] = true;
-			visitedNodes.Add(currentNode);
-
-			if (currentNode == targetNode)
-				return visitedNodes;
-
-			var neighbours = adjacencyLists[currentNode];
-			foreach (var nodeToGo in neighbours)
-			{
-				if (visited[nodeToGo] || GetEdge(currentNode, nodeToGo).IsBusy())
-					continue;
-
-				nodesStorage.Insert(nodeToGo);
-			}
-		}
-
-		return visitedNodes;
-	}
-
-	private IList<int> GetReverseFreeEdges()
-	{
-		var edges = new List<int>();
-
-		for (var i = LeftPartIndex; i < RightPartIndex; i++)
-		{
-			for (var j = RightPartIndex; j < _drainIndex; j++)
-			{
-				if (!GetEdge(j, i).IsBusy() && GetEdge(j, i).IsReverse)
-				{
-					edges.Add(i);
-					edges.Add(j);
-				}
+	for i := leftPartIndex; i < graph.rightPartIndex; i++ {
+		for j := graph.rightPartIndex; j < graph.drainIndex; j++ {
+			if !graph.edges[j][i].isBusy() && graph.edges[j][i].isReverse {
+				edges = append(edges, i)
+				edges = append(edges, j)
 			}
 		}
-
-		return edges;
 	}
 
-	private void RestoreEdges()
+	return edges
+}
+
+func (graph *BipartiteGraph) restoreEdges() {
+	for i := 0; i < graph.nodesCount; i++ {
+		for j := 0; j < graph.nodesCount; j++ {
+			graph.edges[i][j].resetСapacity()
+		}
+	}
+}
+
+/*public IDictionary<string, ISet<int>> SearchMinimumVertexCover(IList<int> greatestMatching)
+{
+	for (var i = 0; i < greatestMatching.Count; i += 2)
 	{
-		for (var i = 0; i < NumberOfNodes; i++)
-			for (var j = 0; j < NumberOfNodes; j++)
-				GetEdge(i, j).ResetСapacity();
+		GetEdge(greatestMatching[i], greatestMatching[i + 1]).SendFlow(1);
+		GetEdge(greatestMatching[i + 1], greatestMatching[i]).ReceiveFlow(1);
 	}
 
-	public IDictionary<string, ISet<int>> SearchMinimumVertexCover(IList<int> greatestMatching)
+	var leftUnvisitedNodes = LeftNodes;
+	var minimumVertexCover = new Dictionary<string, ISet<int>>();
+
+	var rightVisitedNodes = new HashSet<int>();
+
+	for (var i = LeftPartIndex; i < RightPartIndex; i++)
 	{
-		for (var i = 0; i < greatestMatching.Count; i += 2)
+		if (greatestMatching.Contains(i))
+			continue;
+		var searchRoute = NodeSearch(i, -1, _graphAdjacencyLists, new NodeStack());
+		foreach (var node in searchRoute)
 		{
-			GetEdge(greatestMatching[i], greatestMatching[i + 1]).SendFlow(1);
-			GetEdge(greatestMatching[i + 1], greatestMatching[i]).ReceiveFlow(1);
+			leftUnvisitedNodes.Remove(node);
+			if (node >= RightPartIndex)
+				rightVisitedNodes.Add(node);
 		}
+	}
 
-		var leftUnvisitedNodes = LeftNodes;
-		var minimumVertexCover = new Dictionary<string, ISet<int>>();
+	RestoreEdges();
 
-		var rightVisitedNodes = new HashSet<int>();
+	minimumVertexCover.Add("leftNodes", leftUnvisitedNodes);
+	minimumVertexCover.Add("rightNodes", rightVisitedNodes);
 
-		for (var i = LeftPartIndex; i < RightPartIndex; i++)
-		{
-			if (greatestMatching.Contains(i))
-				continue;
-			var searchRoute = NodeSearch(i, -1, _graphAdjacencyLists, new NodeStack());
-			foreach (var node in searchRoute)
-			{
-				leftUnvisitedNodes.Remove(node);
-				if (node >= RightPartIndex)
-					rightVisitedNodes.Add(node);
-			}
-		}
-
-		RestoreEdges();
-
-		minimumVertexCover.Add("leftNodes", leftUnvisitedNodes);
-		minimumVertexCover.Add("rightNodes", rightVisitedNodes);
-
-		return minimumVertexCover;
-	}*/
+	return minimumVertexCover;
+}*/
